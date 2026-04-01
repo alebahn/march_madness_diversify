@@ -115,23 +115,39 @@ def expected_max(picks1, picks2, matches, score_scheme, score_scheme2 = None):
         total_score = total_score + max(match_score1, match_score2)
     return total_score / len(matches)
 
+def generate_canidates(odds, counts, pick=None):
+    if not counts:
+        return [[]]
+    if pick is None:
+        picks = sorted(range(len(odds)), reverse=True, key=lambda p: odds[p][-1])[:counts[-1]]
+    else:
+        picks = [pick]
+    half = len(odds) // 2
+    trunc_odds = [row[:-1] for row in odds]
+    trunc_counts = counts[:-1]
+    brackets = []
+    for pick in picks:
+        if pick < half:
+            lower_brackets = generate_canidates(trunc_odds[:half], trunc_counts, pick)
+            upper_brackets = generate_canidates(trunc_odds[half:], trunc_counts)
+        else:
+            lower_brackets = generate_canidates(trunc_odds[:half], trunc_counts)
+            upper_brackets = generate_canidates(trunc_odds[half:], trunc_counts, pick - half)
+        for lower_picks in lower_brackets:
+            for upper_picks in upper_brackets:
+                bracket = [lower + [upper_pick + half for upper_pick in upper] for lower, upper in zip(lower_picks, upper_picks)]
+                bracket.append([pick])
+                brackets.append(bracket)
+    return brackets
+
 def optimize_max(odds, matches, chaulk_bracket, score_scheme, score_scheme2=None):
     score_scheme2 = score_scheme2 or score_scheme
-    top_score = 0.0
-    top_bracket = None
-    try:
-        while True:
-            alt = generate_mcs(odds)
-            score = expected_max(chaulk_bracket, alt, matches, score_scheme, score_scheme2)
-            if score > top_score:
-                top_score = score
-                top_bracket = alt
-                sys.stdout.write("\r")
-                sys.stdout.write(f"Best score: {top_score}")
-                sys.stdout.flush()
-    except KeyboardInterrupt:
-        pass
-    return top_bracket
+    top_pick = (0.0, [])
+    for bracket in generate_canidates(odds, [1, 1, 1, 2, 4, 4]):
+        score = expected_max(chaulk_bracket, bracket, matches, score_scheme, score_scheme2)
+        if score > top_pick[0]:
+            top_pick = (score, bracket)
+    return top_pick
 
 def print_bracket(bracket, names):
     names = list(names)
@@ -187,16 +203,10 @@ def main():
     print_bracket(chaulk_picks, odds_data.keys())
     mcs_expectation = expected_score(chaulk_picks, matches, SCORE_SCHEME)
     print(f"mcs expectation: {mcs_expectation}")
-    diversity_pick = [round[:] for round in chaulk_picks]
-    diversity_pick[-1][0] = 48
-    expectation_max = expected_max(chaulk_picks, diversity_pick, matches, SCORE_SCHEME)
-    print(f"expectation(max(chaulk, diversity)): {expectation_max}")
-    mcs_expectation = expected_score(diversity_pick, matches, SCORE_SCHEME)
+    expectation_max, alt_pick = optimize_max(list(odds_data.values()), matches, chaulk_picks, SCORE_SCHEME)
+    mcs_expectation = expected_score(alt_pick, matches, SCORE_SCHEME)
     print(f"mcs expectation: {mcs_expectation}")
-    alt_pick = optimize_max(conditional_odds, matches, chaulk_picks, SCORE_SCHEME)
-    expectation_max = expected_max(chaulk_picks, alt_pick, matches, SCORE_SCHEME)
     print(f"expectation(max(chaulk, alt)): {expectation_max}")
-    # print(diversity_pick)
     print_bracket(alt_pick, odds_data.keys())
 
 if __name__ == "__main__":
