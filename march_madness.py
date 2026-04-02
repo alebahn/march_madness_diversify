@@ -122,9 +122,7 @@ def expected_max(chaulk_scores, picks2, matches, score_scheme, score_scheme2 = N
     score_scheme2 = score_scheme2 or score_scheme
     total_score = 0
     for match_, chaulk_score in zip(matches, chaulk_scores):
-        match_score2 = 0
-        for g_round, p_round, round_points in zip(match_, picks2, score_scheme):
-            match_score2 = match_score2 + (g_round & p_round).bit_count() * round_points
+        match_score2 = score_pick(picks2, match_, score_scheme2)
         total_score = total_score + max(chaulk_score, match_score2)
     return total_score / len(matches)
 
