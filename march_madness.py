@@ -143,10 +143,15 @@ def generate_canidates(odds, counts, pick=None):
 def optimize_max(odds, matches, chaulk_bracket, score_scheme, score_scheme2=None):
     score_scheme2 = score_scheme2 or score_scheme
     top_pick = (0.0, [])
-    for bracket in generate_canidates(odds, [1, 1, 1, 2, 4, 4]):
+    # for i, bracket in enumerate(generate_canidates(odds, [1, 1, 2, 4, 16, 16])):
+    for i, bracket in enumerate(generate_canidates(odds, [1, 1, 1, 2, 4, 4])):
         score = expected_max(chaulk_bracket, bracket, matches, score_scheme, score_scheme2)
         if score > top_pick[0]:
             top_pick = (score, bracket)
+        sys.stdout.write("\r")
+        sys.stdout.write(f"checked bracket {i+1}/{4**3}")
+        sys.stdout.flush()
+    print()
     return top_pick
 
 def print_bracket(bracket, names):
