@@ -122,7 +122,9 @@ def expected_max(chaulk_scores, picks2, matches, score_scheme, score_scheme2 = N
     score_scheme2 = score_scheme2 or score_scheme
     total_score = 0
     for match_, chaulk_score in zip(matches, chaulk_scores):
-        match_score2 = score_pick(picks2, match_, score_scheme2)
+        match_score2 = 0
+        for g_round, p_round, round_points in zip(match_, picks2, score_scheme):
+            match_score2 = match_score2 + (g_round & p_round).bit_count() * round_points
         total_score = total_score + max(chaulk_score, match_score2)
     return total_score / len(matches)
 
@@ -153,10 +155,10 @@ def generate_canidates(odds, counts, pick=None):
 def optimize_max(odds, matches, chaulk_bracket, score_scheme, score_scheme2=None):
     score_scheme2 = score_scheme2 or score_scheme
     top_pick = (0.0, [])
-    start_time = time.perf_counter()
-    # for i, bracket in enumerate(generate_canidates(odds, [1, 1, 2, 4, 16, 16])):
     chaulk_scores = [score_pick(chaulk_bracket, match_, score_scheme) for match_ in matches]
-    for i, bracket in enumerate(generate_canidates(odds, [1, 1, 1, 2, 4, 4])):
+    start_time = time.perf_counter()
+    for i, bracket in enumerate(generate_canidates(odds, [1, 1, 2, 4, 16, 16])):
+    # for i, bracket in enumerate(generate_canidates(odds, [1, 1, 1, 2, 4, 4])):
         score = expected_max(chaulk_scores, bracket, matches, score_scheme, score_scheme2)
         if score > top_pick[0]:
             top_pick = (score, bracket)
