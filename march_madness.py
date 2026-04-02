@@ -50,10 +50,18 @@ def generate_mcs(odds, pick=None):
     else:
         lower_picks = generate_mcs(trunc_odds[:half])
         upper_picks = generate_mcs(trunc_odds[half:], pick - half)
-    picks = [lower + [upper_pick + half for upper_pick in upper] for lower, upper in zip(lower_picks, upper_picks)]
-    picks.append([pick])
+    picks = [lower + (upper << half) for lower, upper in zip(lower_picks, upper_picks)]
+    picks.append(1 << pick)
     # print(picks)
     return picks
+
+def iter_round(round_num):
+    index=0
+    while(round_num):
+        if round_num & 1:
+            yield index
+        index = index + 1
+        round_num = round_num >> 1
 
 def mcs_odds(matches):
     match_1 = matches[0]
@@ -61,7 +69,7 @@ def mcs_odds(matches):
     counts = [[0 for _ in match_1] for _ in range(len(match_1[0]) * 2)]
     for match_ in matches:
         for i, round in enumerate(match_):
-            for winner in round:
+            for winner in iter_round(round):
                 counts[winner][i] = counts[winner][i] + 1
     return [[count / len(matches) for count in team] for team in counts]
 
@@ -93,15 +101,15 @@ def generate_chaulk(odds, pick=None):
     else:
         lower_picks = generate_chaulk(trunc_odds[:half])
         upper_picks = generate_chaulk(trunc_odds[half:], pick - half)
-    picks = [lower + [upper_pick + half for upper_pick in upper] for lower, upper in zip(lower_picks, upper_picks)]
-    picks.append([pick])
+    picks = [lower + (upper << half) for lower, upper in zip(lower_picks, upper_picks)]
+    picks.append(1 << pick)
     return picks
 
 def expected_score(picks, matches, score_scheme):
     total_score = 0
     for match_ in matches:
         for p_round, m_round, round_points in zip(picks, match_, score_scheme):
-            total_score = total_score + len(set(p_round).intersection(m_round)) * round_points
+            total_score = total_score + (p_round & m_round).bit_count() * round_points
     return total_score / len(matches)
 
 def expected_max(picks1, picks2, matches, score_scheme, score_scheme2 = None):
@@ -111,8 +119,8 @@ def expected_max(picks1, picks2, matches, score_scheme, score_scheme2 = None):
         match_score1 = 0
         match_score2 = 0
         for p1_round, p2_round, m_round, round_points1, round_points2 in zip(picks1, picks2, match_, score_scheme, score_scheme2):
-            match_score1 = match_score1 + len(set(p1_round).intersection(m_round)) * round_points1
-            match_score2 = match_score2 + len(set(p2_round).intersection(m_round)) * round_points2
+            match_score1 = match_score1 + (p1_round & m_round).bit_count() * round_points1
+            match_score2 = match_score2 + (p2_round & m_round).bit_count() * round_points2
         total_score = total_score + max(match_score1, match_score2)
     return total_score / len(matches)
 
@@ -136,8 +144,8 @@ def generate_canidates(odds, counts, pick=None):
             upper_brackets = generate_canidates(trunc_odds[half:], trunc_counts, pick - half)
         for lower_picks in lower_brackets:
             for upper_picks in upper_brackets:
-                bracket = [lower + [upper_pick + half for upper_pick in upper] for lower, upper in zip(lower_picks, upper_picks)]
-                bracket.append([pick])
+                bracket = [lower + (upper << half) for lower, upper in zip(lower_picks, upper_picks)]
+                bracket.append(1 << pick)
                 brackets.append(bracket)
     return brackets
 
@@ -158,23 +166,18 @@ def optimize_max(odds, matches, chaulk_bracket, score_scheme, score_scheme2=None
     print(f"elapsed time: {end_time - start_time}")
     return top_pick
 
+def ind_round(round_num, index):
+    return list(iter_round(round_num))[index]
+
 def print_bracket(bracket, names):
     names = list(names)
     max_width = max(len(name) for name in names)
-    bracket = [list(range(len(names))), *bracket]
+    bracket = [(1 << len(names)) - 1, *bracket]
     for i in range(1, len(names) * 2):
         binary = bin(i)
         prefix = binary.rstrip('0')
         zero_count = len(binary) - len(prefix)
-        print(f"{' '*4*zero_count}{names[bracket[zero_count][int(prefix, 2)//2]]}")
-        # if i % 4 == 1:
-        #     print(f"{names[i//4*2]:>{max_width}}┓")
-        # elif i % 4 == 3:
-        #     print(f"{names[i//4*2+1]:>{max_width}}┛")
-        # elif i % 4 == 2:
-        #     print(f"{names[bracket[0][i//4]]:>{max_width*3//2}}")
-        # else:
-        #     print()
+        print(f"{' '*4*zero_count}{names[ind_round(bracket[zero_count], int(prefix, 2)//2)]}")
 
 def main():
     if len(sys.argv) != 2:
@@ -204,11 +207,11 @@ def main():
     # matches = [generate_mcs(odds_data.values()) for _ in range(1)]
     print(f"{len(matches)} generated.")
     # print(matches[0])
-    odds2 = mcs_odds(matches)
+    # odds2 = mcs_odds(matches)
     # print(list(odds_data.values()))
     # print(odds2)
     chaulk_picks = generate_chaulk(odds_data.values())
-    # print(chaulk_picks)
+    print(chaulk_picks)
     print_bracket(chaulk_picks, odds_data.keys())
     mcs_expectation = expected_score(chaulk_picks, matches, SCORE_SCHEME)
     print(f"mcs expectation: {mcs_expectation}")
