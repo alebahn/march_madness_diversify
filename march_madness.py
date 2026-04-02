@@ -126,7 +126,8 @@ def expected_max(picks1, picks2, matches, score_scheme, score_scheme2 = None):
 
 def generate_canidates(odds, counts, pick=None):
     if not counts:
-        return [[]]
+        yield []
+        return
     if pick is None:
         picks = sorted(range(len(odds)), reverse=True, key=lambda p: odds[p][-1])[:counts[-1]]
     else:
@@ -134,7 +135,6 @@ def generate_canidates(odds, counts, pick=None):
     half = len(odds) // 2
     trunc_odds = [row[:-1] for row in odds]
     trunc_counts = counts[:-1]
-    brackets = []
     for pick in picks:
         if pick < half:
             lower_brackets = generate_canidates(trunc_odds[:half], trunc_counts, pick)
@@ -146,8 +146,7 @@ def generate_canidates(odds, counts, pick=None):
             for upper_picks in upper_brackets:
                 bracket = [lower + (upper << half) for lower, upper in zip(lower_picks, upper_picks)]
                 bracket.append(1 << pick)
-                brackets.append(bracket)
-    return brackets
+                yield bracket
 
 def optimize_max(odds, matches, chaulk_bracket, score_scheme, score_scheme2=None):
     score_scheme2 = score_scheme2 or score_scheme
