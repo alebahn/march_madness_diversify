@@ -152,29 +152,20 @@ def generate_canidates(odds, counts, pick=None):
 
 def optimize_max(odds, matches, chaulk_bracket, score_scheme, score_scheme2=None):
     score_scheme2 = score_scheme2 or score_scheme
-    top_pick = (0.0, [])
-    chaulk_scores = [score_pick(chaulk_bracket, match_, score_scheme) for match_ in matches]
+    top_pick = (0.0,)
     start_time = time.perf_counter()
-    for  bracket in generate_canidates(odds, [1, 1, 2, 4, 16, 16]):
-        score = expected_max(chaulk_scores, bracket, matches, score_scheme, score_scheme2)
-        if score > top_pick[0]:
-            top_pick = (score, bracket)
-    end_time = time.perf_counter()
-    print(f"score before fine tunimg: {top_pick[0]}")
-    print(f"elapsed time: {end_time - start_time}")
-    trunc_odds = [row[:3] for row in odds]
-    start_time = time.perf_counter()
-    for i, pick in enumerate(iter_round(top_pick[1][2])):
-        mask = ~((1 << 8) - 1 << i * 8)
-        for bracket in generate_canidates(trunc_odds[i*8:i*8+8], [2,4,1], pick >> i * 8):
-            full_bracket = [*(b_round << i * 8 | t_round & mask for b_round, t_round in zip(bracket, top_pick[1])),
-                            *top_pick[1][3:]]
-            score = expected_max(chaulk_scores, bracket, matches, score_scheme, score_scheme2)
+    candidates = list(generate_canidates(odds, [1, 1, 1, 2, 4, 4]))
+    # candidates = list(generate_canidates(odds, [1, 1, 2, 4, 16, 16]))
+    candidate_scores = [[score_pick(bracket, match_, score_scheme) for match_ in matches] for bracket in candidates]
+    for i, scores_a in enumerate(candidate_scores):
+        for j, scores_b in enumerate(candidate_scores[i + 1:]):
+            score = sum(max(score_a, score_b) for score_a, score_b in zip(scores_a, scores_b))/len(scores_a)
             if score > top_pick[0]:
-                top_pick = (score, bracket)
+                top_pick = score, i, i + 1 + j
+
     end_time = time.perf_counter()
     print(f"elapsed time: {end_time - start_time}")
-    return top_pick
+    return top_pick[0], candidates[top_pick[1]], candidates[top_pick[2]]
 
 def ind_round(round_num, index):
     return list(iter_round(round_num))[index]
@@ -225,11 +216,14 @@ def main():
     print_bracket(chaulk_picks, odds_data.keys())
     mcs_expectation = expected_score(chaulk_picks, matches, SCORE_SCHEME)
     print(f"mcs expectation: {mcs_expectation}")
-    expectation_max, alt_pick = optimize_max(list(odds_data.values()), matches, chaulk_picks, SCORE_SCHEME)
-    mcs_expectation = expected_score(alt_pick, matches, SCORE_SCHEME)
-    print(f"mcs expectation: {mcs_expectation}")
+    expectation_max, pick1, pick2 = optimize_max(list(odds_data.values()), matches, chaulk_picks, SCORE_SCHEME)
+    mcs_expectation1 = expected_score(pick1, matches, SCORE_SCHEME)
+    mcs_expectation2 = expected_score(pick2, matches, SCORE_SCHEME)
+    print(f"mcs expectations: {mcs_expectation1} {mcs_expectation2}")
     print(f"expectation(max(chaulk, alt)): {expectation_max}")
-    print_bracket(alt_pick, odds_data.keys())
+    print_bracket(pick1, odds_data.keys())
+    print()
+    print_bracket(pick2, odds_data.keys())
 
 if __name__ == "__main__":
     main()
