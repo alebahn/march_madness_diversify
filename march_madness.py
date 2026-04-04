@@ -155,16 +155,24 @@ def optimize_max(odds, matches, chaulk_bracket, score_scheme, score_scheme2=None
     top_pick = (0.0, [])
     chaulk_scores = [score_pick(chaulk_bracket, match_, score_scheme) for match_ in matches]
     start_time = time.perf_counter()
-    for i, bracket in enumerate(generate_canidates(odds, [1, 1, 2, 4, 16, 16])):
-    # for i, bracket in enumerate(generate_canidates(odds, [1, 1, 1, 2, 4, 4])):
+    for  bracket in generate_canidates(odds, [1, 1, 2, 4, 16, 16]):
         score = expected_max(chaulk_scores, bracket, matches, score_scheme, score_scheme2)
         if score > top_pick[0]:
             top_pick = (score, bracket)
-        # sys.stdout.write("\r")
-        # sys.stdout.write(f"checked bracket {i+1}/{4**3}")
-        # sys.stdout.flush()
     end_time = time.perf_counter()
-    # print()
+    print(f"score before fine tunimg: {top_pick[0]}")
+    print(f"elapsed time: {end_time - start_time}")
+    trunc_odds = [row[:3] for row in odds]
+    start_time = time.perf_counter()
+    for i, pick in enumerate(iter_round(top_pick[1][2])):
+        mask = ~((1 << 8) - 1 << i * 8)
+        for bracket in generate_canidates(trunc_odds[i*8:i*8+8], [2,4,1], pick >> i * 8):
+            full_bracket = [*(b_round << i * 8 | t_round & mask for b_round, t_round in zip(bracket, top_pick[1])),
+                            *top_pick[1][3:]]
+            score = expected_max(chaulk_scores, bracket, matches, score_scheme, score_scheme2)
+            if score > top_pick[0]:
+                top_pick = (score, bracket)
+    end_time = time.perf_counter()
     print(f"elapsed time: {end_time - start_time}")
     return top_pick
 
