@@ -5,6 +5,7 @@ import csv
 import time
 from itertools import islice
 from random import random
+from heapq import *
 
 def batched(iterable, n):
     it = iter(iterable)
@@ -12,7 +13,7 @@ def batched(iterable, n):
         yield batch
 
 SCORE_SCHEME = [2,4,8,16,20,24]
-# MCS_ITTERATIONS = 1
+# MCS_ITTERATIONS = 1000
 MCS_ITTERATIONS = 100000
 
 def condition_odds(odds, last_row = -1):
@@ -152,19 +153,29 @@ def generate_canidates(odds, counts, pick=None):
 
 def optimize_max(odds, matches, chaulk_bracket, score_scheme, score_scheme2=None):
     score_scheme2 = score_scheme2 or score_scheme
-    top_pick = (0.0,)
+    top_picks = []
     start_time = time.perf_counter()
-    candidates = list(generate_canidates(odds, [1, 1, 1, 2, 4, 4]))
-    # candidates = list(generate_canidates(odds, [1, 1, 2, 4, 16, 16]))
+    # candidates = list(generate_canidates(odds, [1, 1, 1, 2, 4, 4]))
+    candidates = list(generate_canidates(odds, [1, 1, 2, 4, 16, 16]))
     candidate_scores = [[score_pick(bracket, match_, score_scheme) for match_ in matches] for bracket in candidates]
     for i, scores_a in enumerate(candidate_scores):
         for j, scores_b in enumerate(candidate_scores[i + 1:]):
-            score = sum(max(score_a, score_b) for score_a, score_b in zip(scores_a, scores_b))/len(scores_a)
-            if score > top_pick[0]:
-                top_pick = score, i, i + 1 + j
-
+            score = sum(max(score_a, score_b) for score_a, score_b in zip(scores_a[:1000], scores_b[:1000]))/1000
+            if len(top_picks) >= 1000:
+                heappop(top_picks)
+            heappush(top_picks, (score, i, i + 1 + j))
     end_time = time.perf_counter()
     print(f"elapsed time: {end_time - start_time}")
+    print(max(top_picks))
+    top_pick = (0.0,)
+    start_time = time.perf_counter()
+    for _, i, j in top_picks:
+        score = sum(max(score_a, score_b) for score_a, score_b in zip(candidate_scores[i], candidate_scores[j]))/len(matches)
+        if score > top_pick[0]:
+            top_pick = score, i, j
+    end_time = time.perf_counter()
+    print(f"elapsed time: {end_time - start_time}")
+    print(top_pick)
     return top_pick[0], candidates[top_pick[1]], candidates[top_pick[2]]
 
 def ind_round(round_num, index):
