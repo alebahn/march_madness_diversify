@@ -151,7 +151,7 @@ def generate_canidates(odds, counts, pick=None):
                 bracket.append(1 << pick)
                 yield bracket
 
-def optimize_max(odds, matches, chaulk_bracket, score_scheme, score_scheme2=None):
+def optimize_max(odds, matches, score_scheme, score_scheme2=None):
     score_scheme2 = score_scheme2 or score_scheme
     top_picks = []
     start_time = time.perf_counter()
@@ -227,7 +227,7 @@ def main():
     print_bracket(chaulk_picks, odds_data.keys())
     mcs_expectation = expected_score(chaulk_picks, matches, SCORE_SCHEME)
     print(f"mcs expectation: {mcs_expectation}")
-    expectation_max, pick1, pick2 = optimize_max(list(odds_data.values()), matches, chaulk_picks, SCORE_SCHEME)
+    expectation_max, pick1, pick2 = optimize_max(list(odds_data.values()), matches, SCORE_SCHEME)
     mcs_expectation1 = expected_score(pick1, matches, SCORE_SCHEME)
     mcs_expectation2 = expected_score(pick2, matches, SCORE_SCHEME)
     print(f"mcs expectations: {mcs_expectation1} {mcs_expectation2}")
