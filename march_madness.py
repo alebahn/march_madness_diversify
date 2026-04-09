@@ -127,7 +127,7 @@ def expected_max(chaulk_scores, picks2, matches, score_scheme, score_scheme2 = N
         total_score = total_score + max(chaulk_score, match_score2)
     return total_score / len(matches)
 
-def generate_canidates(odds, counts, pick=None):
+def generate_candidates(odds, counts, pick=None):
     if not counts:
         yield []
         return
@@ -140,11 +140,11 @@ def generate_canidates(odds, counts, pick=None):
     trunc_counts = counts[:-1]
     for pick in picks:
         if pick < half:
-            lower_brackets = generate_canidates(trunc_odds[:half], trunc_counts, pick)
-            upper_brackets = generate_canidates(trunc_odds[half:], trunc_counts)
+            lower_brackets = generate_candidates(trunc_odds[:half], trunc_counts, pick)
+            upper_brackets = generate_candidates(trunc_odds[half:], trunc_counts)
         else:
-            lower_brackets = generate_canidates(trunc_odds[:half], trunc_counts)
-            upper_brackets = generate_canidates(trunc_odds[half:], trunc_counts, pick - half)
+            lower_brackets = generate_candidates(trunc_odds[:half], trunc_counts)
+            upper_brackets = generate_candidates(trunc_odds[half:], trunc_counts, pick - half)
         for lower_picks in lower_brackets:
             for upper_picks in upper_brackets:
                 bracket = [lower + (upper << half) for lower, upper in zip(lower_picks, upper_picks)]
@@ -155,8 +155,8 @@ def optimize_max(odds, matches, score_scheme, score_scheme2=None):
     score_scheme2 = score_scheme2 or score_scheme
     top_picks = []
     start_time = time.perf_counter()
-    # candidates = list(generate_canidates(odds, [1, 1, 1, 2, 4, 4]))
-    candidates = list(generate_canidates(odds, [1, 1, 2, 4, 16, 16]))
+    # candidates = list(generate_candidates(odds, [1, 1, 1, 2, 4, 4]))
+    candidates = list(generate_candidates(odds, [1, 1, 2, 4, 16, 16]))
     candidate_scores = [[score_pick(bracket, match_, score_scheme) for match_ in matches] for bracket in candidates]
     for i, scores_a in enumerate(candidate_scores):
         for j, scores_b in enumerate(candidate_scores[i + 1:]):
