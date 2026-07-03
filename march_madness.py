@@ -6,13 +6,16 @@ import time
 from itertools import islice
 from random import random
 from heapq import *
+import matplotlib.pyplot as plt
+from numpy import ravel
 
 def batched(iterable, n):
     it = iter(iterable)
     while batch := tuple(islice(it, n)):
         yield batch
 
-SCORE_SCHEME = [2,4,8,16,20,24]
+SCORE_SCHEME = [10,20,40,80,160,320]
+# SCORE_SCHEME = [2,4,8,16,20,24]
 # MCS_ITTERATIONS = 1000
 MCS_ITTERATIONS = 100000
 
@@ -158,6 +161,8 @@ def optimize_max(odds, matches, score_scheme, score_scheme2=None):
     # candidates = list(generate_candidates(odds, [1, 1, 1, 2, 4, 4]))
     candidates = list(generate_candidates(odds, [1, 1, 2, 4, 16, 16]))
     candidate_scores = [[score_pick(bracket, match_, score_scheme) for match_ in matches] for bracket in candidates]
+    plt.hist(ravel(candidate_scores), bins=200)
+    plt.savefig("scores.png")
     for i, scores_a in enumerate(candidate_scores):
         for j, scores_b in enumerate(candidate_scores[i + 1:]):
             score = sum(max(score_a, score_b) for score_a, score_b in zip(scores_a[:1000], scores_b[:1000]))/1000
